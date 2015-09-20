@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+   <meta charset="utf-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <meta http-equiv="X-UA-Compatible" content="IE=edge">
+   <title>Bubble Map</title>
+   <!-- Bootstrap CSS -->
+   <link rel="stylesheet" href="../css/bootstrap.css">
+   <link rel="stylesheet" href="../css/bootstrap-theme.min.css">
+   <!-- Custom CSS -->
+   <link rel="stylesheet" href="../css/styles.css">
+   <link rel="stylesheet" href="mapstyles.css">
+   <!-- Responsive Bootstrap -->
+   <link rel="stylesheet" href="../css/bootstrap-responsive.css">
+</head>
+      
+<body>
+
+<!-- Begin Content -->
+<!-- Nav Bar -->
+<nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+   <div class="container"> <!--Begin Container -->
+      <div class="navbar-header"> <!-- Begin Header -->
+         <button class="navbar-toggle collapsed" aria-controls="navbar" aria-expanded="false" data-target=".navbar-collapse" data-toggle="collapse" type="button">
+            <span class="sr-only">Toggle Navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+         </button>
+         <a class="navbar-brand" href="../#">Victoria Ward</a>
+      </div> <!-- End Header -->
+      
+      <div class="navbar-collapse collapse"> <!--Begin Collapse -->
+         <ul class="nav navbar-nav">
+            <li>
+               <a href="../#">Home</a>
+            </li>
+            <li>
+               <a href="../#about">About</a>
+            </li>
+            <li>
+               <a href="../#blog">Blog</a>
+            </li>
+            <li>
+               <a href="../#projects">Projects</a>
+            </li>
+         </ul>
+         
+      </div> <!--End Collapse -->
+   </div> <!-- End Container -->
+</nav> <!-- End Navbar -->
+
+<div class="container" role="main"> <!-- Begin Container -->
+   <div class="project" id="info">
+      <h2>Project Info</h2>
+   </div>
+   
+   <div class="project" id="map">
+      
+   </div>
+</div>
+   
+<script src="d3.js"></script>
+<script src="topojson.js"></script>
+<script>
+
+   // Define variables
+   
+   var width = 960,
+       height = 600;
+   
+   var path = d3.geo.path()
+      .projection(null);
+   
+   var radius = d3.scale.sqrt()
+         .domain([0, 1e6])
+         .range([0, 15]);
+   
+   var svg = d3.select("#map").append("svg")
+      .attr("width", width)
+      .attr("height", height);
+   
+   var legend = svg.append("g")
+      .attr("class", "legend")
+      .attr("transform", "translate(" + (width - 50) + "," + (height - 20) + ")")
+      .selectAll("g")
+         .data([1e6, 3e6, 6e6])
+      .enter().append("g");
+   
+   // Map legend
+   
+   legend.append("circle")
+      .attr("cy", function(d) {
+         return -radius(d);
+      })
+      .attr("r", radius);
+   
+   legend.append("text")
+      .attr("y", function(d) {
+         return -2 * radius(d); 
+      })
+      .attr("dy", "1.3em")
+      .text(d3.format(".1s"));
+   
+   // Draw map
+   
+   function renderMap() {
+      d3.json("us.json", function(error, us) {
+         if (error) return console.error(error);
+   
+         svg.append("path")
+            .datum(topojson.feature(us, us.objects.nation))
+            .attr("class", "land")
+            .attr("d", path);
+   
+         svg.append("path")
+            .datum(topojson.mesh(us, us.objects.states, function(a, b) {
+               return a !== b;
+            }))
+            .attr("class", "border border--state")
+            .attr("d", path);
+         
+         });
+      };
+   
+   // Draw bubbles
+
+   function renderBubbles(arg) {
+      d3.json("us.json", function(error, us) {
+         if (error) return console.error(error);  
+      
+      var pop = topojson.feature(us, us.objects.counties).features.sort(function(a, b) {
+         return b.properties.population - a.properties.population;
+      })
+      
+      var pov = topojson.feature(us, us.objects.counties).features.sort(function(a, b) {
+         return b.properties.past_12_months - a.properties.past_12_months;
+      })
+      
+      var male = topojson.feature(us, us.objects.counties).features.sort(function(a, b) {
+         return b.properties.past_12_months_male - a.properties.past_12_months_male;
+      })
+      
+      var female = topojson.feature(us, us.objects.counties).features.sort(function(a, b) {
+         return b.properties.past_12_months_female - a.properties.past_12_months_female;
+      })
+      
+      var svgBubble = d3.selectAll(".bubble")
+      
+      if (arg == "pop") {
+         
+         if (!svgBubble.empty()) {
+            d3.selectAll(".bubble").remove();
+         }
+         
+         svg.append("g")
+            .attr("class", "bubble")
+            .selectAll("circle")
+            .data(pop)
+         .enter().append("circle")
+            .attr("transform", function(d) {
+               return "translate(" + path.centroid(d) + ")";
+            })
+            .attr("r", function(d) {
+               return radius(d.properties.population);
+            });         
+      }
+         
+      if (arg == "pov") {
+         
+         if (!svgBubble.empty()) {
+            d3.selectAll(".bubble").remove();
+         }
+         
+         svg.append("g")
+            .attr("class", "bubble")
+            .selectAll("circle")
+            .data(pov)
+         .enter().append("circle")
+            .attr("transform", function(d) {
+               return "translate(" + path.centroid(d) + ")";
+            })
+            .attr("r", function(d) {
+               return radius(d.properties.past_12_months);
+            });
+      }
+         
+      if (arg == "male") {
+         if (!svgBubble.empty()) {
+            d3.selectAll(".bubble").remove();
+         }
+         
+         svg.append("g")
+            .attr("class", "bubble")
+            .selectAll("circle")
+            .data(male)
+         .enter().append("circle")
+            .attr("transform", function(d) {
+               return "translate(" + path.centroid(d) + ")";
+            })
+            .attr("r", function(d) {
+               return radius(d.properties.past_12_months_male);
+            });
+      }
+         
+      if (arg == "female") {
+         if (!svgBubble.empty()) {
+            d3.selectAll(".bubble").remove();
+         }
+         
+         svg.append("g")
+            .attr("class", "bubble")
+            .selectAll("circle")
+            .data(female)
+         .enter().append("circle")
+            .attr("transform", function(d) {
+               return "translate(" + path.centroid(d) + ")";
+            })
+            .attr("r", function(d) {
+               return radius(d.properties.past_12_months_female);
+            });
+      }
+         
+      });
+   };
+   
+   renderMap();
+
+
+</script>
+   
+<div>
+   <button onclick="renderBubbles('pop')">Population</button>
+   <button onclick="renderBubbles('pov')">Poverty</button>
+   <button onclick="renderBubbles('male')">Male Poverty</button>
+   <button onclick="renderBubbles('female')">Female Poverty</button>
+</div>
+   
+<div class="footer"> <!-- Start Footer -->
+   Theme powered by <a href="http://getbootstrap.com/">Bootstrap</a>
+</div> <!-- End Footer -->
+   
+<!-- Bootstrap JavaScript -->
+<script src="../js/jquery1.11.3.min.js"></script>
+<script src="../js/bootstrap.min.js"></script>
+
+</body>
+</html>
+   
+   
